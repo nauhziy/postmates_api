@@ -1,9 +1,7 @@
-from sqlalchemy.sql import func
-from sqlalchemy.dialects import postgresql
-
 from postmates import db
 
-### DB for Orders ###
+
+# DB for Orders
 class Order(db.Model):
     __tablename__ = 'orders'
 

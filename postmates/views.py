@@ -7,11 +7,15 @@ from postmates import app, db
 from postmates.forms import OrderForm
 from postmates.models import Order
 
-import json
 import requests
 from datetime import datetime
 from dateutil import tz
-import os
+
+# Please configure these if you wish to run it on your own local machine
+app.config['SECRET_KEY'] = os.environ.get("secret_key")
+postmates_api_key = os.environ.get("postmates_api_key")
+customer_id = os.environ.get("customer_id")
+
 
 # ----------------------------------------------------------------------------#
 #  Jinja Filters.
@@ -35,25 +39,25 @@ app.jinja_env.filters['datetime'] = format_datetime
 # ----------------------------------------------------------------------------#
 
 
-# Parses the date 
+# Parses the date
 def date_parse_to_utc(date):
     dt = datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
     dt_utc = dt.replace(tzinfo=tz.tzutc())
     return dt_utc.strftime("%Y-%m-%d %H:%M:%S")
 
 
-### General Classes ###
+# General Classes
 # Contains the functions used to post/get from postmates API
-class api(object):
+class Api(object):
     base_url = "https://api.postmates.com"
-    
+
     def __init__(self, key, customer_id):
         self.key = key
         self.customer_id = customer_id
         self.delivery_id = None
         self.quote_id = None
-    
-    ### Delivery
+
+    # Delivery
     def post_create_delivery(self, delivery):
         req_url = f"{self.base_url}/v1/customers/{self.customer_id}/deliveries"
 
@@ -62,48 +66,20 @@ class api(object):
         response = requests.post(req_url, data=req_params, auth=(self.key, ""))
         return response
 
-
-    def get_delivery(self):
-        req_url = f"{self.base_url}/v1/customers/{self.customer_id}/deliveries/{self.delivery_id}"
-
-        response = requests.get(req_url, data=req_params, auth=(self.key, ""))
-        return response
-
-    def post_update_delivery(self, tip_by_customer):
-        req_url = f"{self.base_url}/v1/customers/{self.customer_id}/deliveries/{self.delivery_id}"
-        
-        req_params = {
-            "tip_by_customer" : tip_by_customer
-        }
-
-        response = requests.post(req_url, data=req_params, auth=(self.key, ""))
-        return response
-
-    def post_cancel_delivery(self):
-        req_url = f"{self.base_url}/v1/customers/{self.customer_id}/deliveries/{self.delivery_id}/cancel"
-
-        response = requests.post(req_url, data=req_params, auth=(self.key, ""))
-        return response
-
-    def get_list_delivery(self):
-        req_url = f"{self.base_url}/v1/customers/{self.customer_id}/deliveries"
-
-        response = requests.post(req_url, data=req_params, auth=(self.key, ""))
-        return response
-
-    ### Quote
+    # Quote
     def post_create_quote(self, pickup_addess, dropoff_addess):
         req_url = f"{self.base_url}/v1/customers/{self.customer_id}/delivery_quotes"
 
         req_params = {
-            "pickup_address" : pickup_addess,
-            "dropoff_address" : dropoff_addess
+            "pickup_address": pickup_addess,
+            "dropoff_address": dropoff_addess
         }
 
         response = requests.post(req_url, data=req_params, auth=(self.key, ""))
         return response
 
-class location(object):
+
+class Location(object):
     def __init__(self, name, address, phone_number, business_name=None, notes=None):
         self.name = name
         self.address = address
@@ -113,7 +89,7 @@ class location(object):
 
     def check_validity(self):
         if self.name is None or self.address is None or self.phone_number is None:
-          return False
+            return False
         return True
 
     def __repr__(self):
@@ -137,14 +113,15 @@ class location(object):
 
         return post_data
 
+
 # Get a delivery quote
-class delivery_quote(object):
+class DeliveryQuote(object):
     def __init__(self, api, pickup, dropoff):
         quote = api.post_create_quote(pickup.address, dropoff.address)
         result = quote.json()
 
         if result['kind'] == 'error':
-            raise postmates_api_exception(result['message'] + '\n' + str(result['params']))
+            raise PostmatesApiException(result['message'] + '\n' + str(result['params']))
 
         self.kind = result["kind"]
         self.quote_id = result["id"]
@@ -182,18 +159,9 @@ class delivery_quote(object):
         s.append(f"Expired: {self.expired}")
         return "\n".join(s)
 
-# Create and manipulate Delivery
-class delivery(object):
-    delivery_status = {
-    "pending" : "pending",
-    "pickup" : "pickup",
-    "pickup_complete" : "pickup_complete",
-    "dropoff" : "dropoff",
-    "canceled" : "canceled",
-    "returned" : "returned",
-    "ongoing" : "ongoing"
-    }
 
+# Create and manipulate Delivery
+class Delivery(object):
     def __init__(self, api, manifest, pickup, dropoff, delivery_quote):
         self.api = api
         self.manifest = manifest
@@ -214,16 +182,16 @@ class delivery(object):
     def create(self):
         # ensure that values are valid prior to posting delivery creation request
         if not self.pickup.check_validity():
-            raise postmates_api_exception(f"Pickup details are missing\n{pickup}")
+            raise PostmatesApiException(f"Pickup details are missing\n{pickup}")
 
         if not self.dropoff.check_validity():
-            raise postmates_api_exception(f"Dropoff details are missing\n{dropoff}")
+            raise PostmatesApiException(f"Dropoff details are missing\n{dropoff}")
 
         if self.status is not None:
-            raise postmates_api_exception(f"Delivery has already been submitted")
+            raise PostmatesApiException(f"Delivery has already been submitted")
 
         if self.quote and self.quote.expired:
-            raise postmates_api_exception(f"Delivery quote has expired")
+            raise PostmatesApiException(f"Delivery quote has expired")
 
         delivery_data = self.api.post_create_delivery(self)
         self.update_delivery(delivery_data)
@@ -237,7 +205,7 @@ class delivery(object):
 
     def post_cancel_delivery(self):
         if self.status not in ("dropoff", "canceled"):
-            raise postmates_api_exception("Can only cancel deliveries not yet picked up")
+            raise PostmatesApiException("Can only cancel deliveries not yet picked up")
 
         delivery_data = self.api.post_cancel_delivery(self.delivery_id)
         self.update_delivery(delivery_data)
@@ -246,7 +214,7 @@ class delivery(object):
         data = data.json()
 
         if data['kind'] == 'error':
-            raise postmates_api_exception(data['message'] + '\n' + str(data['params']))
+            raise PostmatesApiException(data['message'] + '\n' + str(data['params']))
 
         self.delivery_id = data["id"]
         self.status = data["status"]
@@ -259,7 +227,6 @@ class delivery(object):
         self.courier = data["courier"]
 
     def post_data(self):
-
         post_data = {}
 
         post_data["manifest"] = self.manifest
@@ -279,41 +246,33 @@ class delivery(object):
         s.append("Dropoff --------------")
         s.append(str(self.dropoff))
 
-        if self.status != None:
+        if self.status is not None:
             s.append("Status --------------")
             s.append(f"Delivery ID: {self.delivery_id}")
             s.append(f"Status: {self.status}")
             s.append(f"Complete: {self.complete}")
-            s.append(f"Pickup ETA: {_to_local_tz(self.pickup_eta)}")
-            s.append(f"Dropoff ETA: {_to_local_tz(self.dropoff_eta)}")
-            s.append(f"Dropoff Deadline: {_to_local_tz(self.dropoff_deadline)}")
+            s.append(f"Pickup ETA: {date_parse_to_utc(self.pickup_eta)}")
+            s.append(f"Dropoff ETA: {date_parse_to_utc(self.dropoff_eta)}")
+            s.append(f"Dropoff Deadline: {date_parse_to_utc(self.dropoff_deadline)}")
             s.append(f"Fee: ${self.fee//100.0}.{self.fee%100.0} {self.currency}")
             s.append(f"Courier: {self.courier}")
-
         return "\n".join(s)
 
-class postmates_api_exception(Exception):
+class PostmatesApiException(Exception):
 
     def __init__(self, message):
         if isinstance(message, str):
-            super(postmates_api_exception, self).__init__(message)
+            super(PostmatesApiException, self).__init__(message)
         else:
-            super(postmates_api_exception, self).__init__(message["message"])
+            super(PostmatesApiException, self).__init__(message["message"])
             self.kind = message["kind"]
             self.code = message["code"]
-
-
-# Please configure these if you wish to run it on your own local machine
-app.config['SECRET_KEY'] = os.environ.get("secret_key")
-postmates_api_key = os.environ.get("postmates_api_key")
-customer_id = os.environ.get("customer_id")
-api = api(postmates_api_key, customer_id)
 
 
 # ----------------------------------------------------------------------------#
 #  Controllers.
 # ----------------------------------------------------------------------------#
-
+api = Api(postmates_api_key, customer_id)
 
 @app.route('/')
 def index():
@@ -352,11 +311,11 @@ def create_orders():
 def create_order_submission():
     try:
         new_order_data = request.form.to_dict()
-        pickup = location(new_order_data['pickup_name'], new_order_data['pickup_address'], new_order_data['pickup_number'])
-        dropoff = location(new_order_data['dropoff_name'], new_order_data['dropoff_address'], new_order_data['dropoff_number'])
-        new_quote = delivery_quote(api, pickup, dropoff)
+        pickup = Location(new_order_data['pickup_name'], new_order_data['pickup_address'], new_order_data['pickup_number'])
+        dropoff = Location(new_order_data['dropoff_name'], new_order_data['dropoff_address'], new_order_data['dropoff_number'])
+        new_quote = DeliveryQuote(api, pickup, dropoff)
 
-        new_delivery = delivery(api, new_order_data['manifest'], pickup, dropoff, new_quote)
+        new_delivery = Delivery(api, new_order_data['manifest'], pickup, dropoff, new_quote)
         new_delivery.create()
 
         new_order_data['id'] = new_delivery.delivery_id

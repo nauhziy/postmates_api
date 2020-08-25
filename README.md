@@ -51,3 +51,5 @@ Go to your browser of choice and key in `127.0.0.1:5000`
 This will open up the web-app.
 
 Have fun and happy deliveries!
+
+# Credits to @far33d and @jennyslu for much of the framework inspiration
