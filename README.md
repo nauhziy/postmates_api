@@ -52,4 +52,4 @@ This will open up the web-app.
 
 Have fun and happy deliveries!
 
-# Credits to @far33d and @jennyslu for much of the framework inspiration
+Credits to @far33d and @jennyslu for much of the framework inspiration
