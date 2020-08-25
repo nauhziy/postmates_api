@@ -8,31 +8,30 @@ pip install -r requirements.txt
 ```
 
 ## Set up Flask
-Please change the app config file path to fit wherever you've downloaded the repo to
-```bash
-export FLASK_APP=postmates
-export FLASK_ENV=development
-export APP_CONFIG_FILE=<Change this to your path please>/postmates/config/development.py
-```
-
 Create instance directory to store secret values. 
 In the your file you should store your API keys, customer_id and secret key as:
+``` bash
+mkdir instance
+touch config.py
+```
+
+Save within config.py
 ```
 postmates_api_key=<enter your api key here>
 customer_id=<enter your customer id here>
 SECRET_KEY=<enter your secret key, can be a random string>
 ```
 
-``` bash
-mkdir instance
-touch config.py
+Please change the app config file path to fit wherever you've downloaded the repo to
+```bash
+export FLASK_APP=postmates
+export FLASK_ENV=development
+export APP_CONFIG_FILE=<Add local path here>/postmates_api/config/development.py
 ```
 
 ## Set up DB
-Make sure Postgres is running. [Postgres.app](https://postgresapp.com) is simple one for Mac.
-
-App uses Flask Migrate to manage DB migrations.
-Edit [dev configuration](./config/development.py) so that the DB configuration is for your local Postgres.
+Set up postgres and run it. [Postgres.app](https://postgresapp.com)
+Edit /config/development.py to match your local configuration.
 
 ```bash
 dropdb postmates

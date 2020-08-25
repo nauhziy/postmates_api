@@ -89,25 +89,6 @@
     </div>
   </div>
 
-  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-  <script>window.jQuery || document.write('<script type="text/javascript" src="/static/js/libs/jquery-1.11.1.min.js"><\/script>')</script>
-  <script type="text/javascript" src="/static/js/libs/bootstrap-3.1.1.min.js" defer></script>
-  <script type="text/javascript" src="/static/js/plugins.js" defer></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-  <script>
-    // send delete request when delete button is pressed
-    $('#delete-button').click(function() {
-      $.ajax({
-        url: $(location).attr('href'),
-        type: "DELETE",
-        success: function() {
-          $.get('/home')
-        }
-      });
-      // $( this ).slideUp();
-    });
-  </script>
-
 </body>
 
 </html>
