@@ -1,0 +1,43 @@
+{% extends 'layouts/main.html' %}
+{% block title %}Socks4Dayz | Orders{% endblock %}
+{% block content %}
+{% for order in orders %}
+<div class="row">
+  <div class="col-sm-6">
+    <p>
+      <strong>ID: {{ order.id }}</strong>
+    </p>
+
+    <p>
+      Pickup: {{ order.pickup_name }}
+    </p>
+    <p>
+      <i class="fas fa-globe-americas"></i> {{ order.pickup_address }}
+    </p>
+    <p>
+      <i class="fas fa-phone-alt"></i> {{ order.pickup_number }}
+    </p>
+
+    <p>
+      Dropoff: {{ order.dropoff_name }}
+    </p>
+    <p>
+      <i class="fas fa-globe-americas"></i> {{ order.dropoff_address }}
+    </p>
+    <p>
+      <i class="fas fa-phone-alt"></i> {{ order.dropoff_number }}
+    </p>
+
+    <p>
+      Manifest: {{ order.manifest }}
+    </p>
+
+    <p>
+       <a href={{ order.tracker_url }} target="_blank"> Track your order</a>
+    </p>
+    <br>
+
+</div>
+</div>
+{% endfor %}
+{% endblock %}
